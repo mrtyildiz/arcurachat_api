@@ -1,0 +1,41 @@
+version: '3.8'
+services:
+  db:
+    image: postgres:latest
+    container_name: arcura_db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: auth_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  api:
+    # build: .
+    # container_name: arcura_api
+    image: arurachat:v1
+    container_name: arcura_api
+    restart: always
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+    environment:
+      DB_HOST: db
+      DB_USER: postgres
+      DB_PASSWORD: password
+      DB_NAME: auth_db
+      DB_PORT: 5432
+    volumes:
+      - ./models:/arcurachat_api/models
+      - ./database:/arcurachat_api/database
+      - ./routes:/arcurachat_api/routes
+      - ./utils:/arcurachat_api/utils
+      - ./main.go:/arcurachat_api/main.go
+    command: ["sleep", "infinity"]
+
+volumes:
+  postgres_data:
