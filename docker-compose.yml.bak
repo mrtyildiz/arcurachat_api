@@ -1,4 +1,5 @@
 version: '3.8'
+
 services:
   db:
     image: postgres:latest
@@ -14,8 +15,6 @@ services:
       - postgres_data:/var/lib/postgresql/data
 
   api:
-    # build: .
-    # container_name: arcura_api
     image: arurachat:v1
     container_name: arcura_api
     restart: always
@@ -23,12 +22,16 @@ services:
       - "8080:8080"
     depends_on:
       - db
+      - fabric-peer
     environment:
       DB_HOST: db
       DB_USER: postgres
       DB_PASSWORD: password
       DB_NAME: auth_db
       DB_PORT: 5432
+      FABRIC_PEER: fabric-peer:7051
+      FABRIC_CHANNEL: mychannel
+      FABRIC_CHAINCODE: messagecc
     volumes:
       - ./models:/arcurachat_api/models
       - ./database:/arcurachat_api/database
@@ -37,5 +40,80 @@ services:
       - ./main.go:/arcurachat_api/main.go
     command: ["sleep", "infinity"]
 
+  fabric-ca:
+    image: hyperledger/fabric-ca:latest
+    container_name: fabric-ca
+    restart: always
+    ports:
+      - "7054:7054"
+    command: fabric-ca-server start -b admin:adminpw
+    volumes:
+      - fabric_ca_data:/etc/hyperledger/fabric-ca
+    environment:
+      FABRIC_CA_HOME: /etc/hyperledger/fabric-ca
+      FABRIC_CA_SERVER_CA_NAME: ca-org1
+      FABRIC_CA_SERVER_TLS_ENABLED: "false"
+
+  fabric-orderer:
+    image: hyperledger/fabric-orderer:latest
+    container_name: fabric-orderer
+    restart: always
+    ports:
+      - "7050:7050"
+    depends_on:
+      - fabric-ca
+    command: orderer
+    volumes:
+      - ./crypto-config/ordererOrganizations:/etc/hyperledger/fabric/ordererOrganizations
+    environment:
+      ORDERER_GENERAL_LOGLEVEL: debug
+      ORDERER_GENERAL_LISTENADDRESS: 0.0.0.0
+      ORDERER_GENERAL_LISTENPORT: 7050
+      ORDERER_GENERAL_LOCALMSPDIR: /etc/hyperledger/fabric/ordererOrganizations/msp
+      ORDERER_GENERAL_LOCALMSPID: OrdererMSP
+
+  fabric-peer:
+    image: hyperledger/fabric-peer:latest
+    container_name: fabric-peer
+    restart: always
+    ports:
+      - "7051:7051"
+    depends_on:
+      - fabric-orderer
+    command: peer node start
+    volumes:
+      - ./crypto-config/peerOrganizations:/etc/hyperledger/fabric/peerOrganizations
+      - ./chaincode:/opt/gopath/src/github.com/chaincode  # ✅ Chaincode dizini ekledik
+    environment:
+      CORE_PEER_ID: fabric-peer
+      CORE_PEER_ADDRESS: fabric-peer:7051
+      CORE_PEER_LOCALMSPID: Org1MSP
+      CORE_PEER_MSPCONFIGPATH: /etc/hyperledger/fabric/peerOrganizations/msp
+
+  fabric-couchdb:
+    image: hyperledger/fabric-couchdb:latest
+    container_name: fabric-couchdb
+    restart: always
+    ports:
+      - "5984:5984"
+
+  cli:
+    image: hyperledger/fabric-tools:latest
+    container_name: cli
+    tty: true
+    stdin_open: true
+    restart: always
+    depends_on:
+      - fabric-peer
+      - fabric-orderer
+    environment:
+      CORE_PEER_ADDRESS: fabric-peer:7051
+      CORE_PEER_LOCALMSPID: Org1MSP
+      CORE_PEER_MSPCONFIGPATH: /etc/hyperledger/fabric/peerOrganizations/msp
+    volumes:
+      - ./crypto-config:/etc/hyperledger/fabric/crypto-config
+      - ./chaincode:/opt/gopath/src/github.com/chaincode  # ✅ Chaincode dosyalarını mount ettik
+
 volumes:
   postgres_data:
+  fabric_ca_data:

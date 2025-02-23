@@ -32,5 +32,7 @@ func ConnectDatabase() {
 	db.AutoMigrate(&models.Message{})
 	db.AutoMigrate(&models.Group{})
 	db.AutoMigrate(&models.GroupMember{})
+	db.AutoMigrate(&models.Friendship{})
+	db.AutoMigrate(&models.FriendRequest{})
 	DB = db
 }

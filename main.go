@@ -17,6 +17,8 @@ func main() {
 	routes.RegisterRoutes(r)
 	routes.RegisterMessageRoutes(r) // Mesaj işlemleri
 	routes.RegisterGroupRoutes(r)
+	routes.RegisterSearchRoutes(r)
+	routes.RegisterFriendRoutes(r)
 
 	// Sunucuyu başlat
 	r.Run(":8080")
