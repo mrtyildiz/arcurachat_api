@@ -30,5 +30,7 @@ func ConnectDatabase() {
 	fmt.Println("✅ Veritabanına bağlantı başarılı")
 	db.AutoMigrate(&models.User{})
 	db.AutoMigrate(&models.Message{})
+	db.AutoMigrate(&models.Group{})
+	db.AutoMigrate(&models.GroupMember{})
 	DB = db
 }
